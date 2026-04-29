@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import type { Toilet } from "@/lib/mock-data";
+import { mockToilets as initialToilets, type Toilet } from "@/lib/mock-data";
 import { Header } from "@/components/header";
 import { MapView } from "@/components/map-view";
 import { BottomSheet } from "@/components/bottom-sheet";
@@ -11,7 +11,7 @@ import { FeedbackModal } from "@/components/feedback-modal";
 const DEFAULT_LOCATION = { lat: 37.498095, lng: 127.02761 };
 
 export default function RushApp() {
-  const [toilets, setToilets] = useState<Toilet[]>([]);
+  const [toilets, setToilets] = useState<Toilet[]>(initialToilets);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>(DEFAULT_LOCATION);
   const [selectedToilet, setSelectedToilet] = useState<Toilet | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);

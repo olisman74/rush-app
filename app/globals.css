@@ -170,3 +170,9 @@ body {
 .leaflet-tile {
   filter: saturate(0.85) brightness(1.02);
 }
+
+/* Tailwind 이미지 리셋으로 인한 지도 타일 깨짐 방지 */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}

@@ -20,10 +20,16 @@ export default function RushApp() {
   const fetchToilets = async (lat: number, lng: number) => {
     try {
       const res = await fetch(`/api/toilets?lat=${lat}&lng=${lng}`);
+      if (!res.ok) {
+        console.error("API Fetch Error:", await res.text());
+        setToilets([]); // 에러 발생 시 초기 데이터(강남)를 지우고 빈 배열로 셋업
+        return;
+      }
       const data = await res.json();
       setToilets(data);
     } catch (error) {
       console.error("Failed to fetch toilets:", error);
+      setToilets([]);
     }
   };
 
@@ -54,6 +60,10 @@ export default function RushApp() {
   );
 
   const handleSOSPress = useCallback(() => {
+    if (sortedToilets.length === 0) {
+      alert("현재 반경 내에 찾을 수 있는 화장실이 없습니다.");
+      return;
+    }
     const nearest = sortedToilets[0];
     if (nearest) setSelectedToilet(nearest);
   }, [sortedToilets]);

@@ -66,19 +66,22 @@ export async function GET(request: Request) {
 
         if (parsedToilets.length > 0) {
           return NextResponse.json(parsedToilets);
+        } else {
+          // 반경 내 화장실이 0개인 경우 빈 배열 반환
+          return NextResponse.json([]);
         }
+      } else {
+        // documents 필드가 없으면 카카오 API 에러 발생 (인증키 오류 등)
+        console.error("Kakao API Error Response:", data);
+        return NextResponse.json({ error: "Kakao API Error", details: data }, { status: 500 });
       }
     } catch (error) {
       console.error("Kakao API Fetch Error:", error);
-      // 에러 발생 시 아래 mock data fallback 으로 진행
+      return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
   }
 
-  // API 키가 없거나 호출 실패, 혹은 반경 내 화장실이 0개일 경우 Mock Data 반환
-  const fallback = mockToilets.map((t) => ({
-    ...t,
-    distance: Math.round(getDistanceMeters({ lat, lng }, { lat: t.lat, lng: t.lng })),
-  })).sort((a, b) => a.distance - b.distance);
-
-  return NextResponse.json(fallback);
+  // API 키가 아예 설정되지 않은 경우
+  console.error("KAKAO_REST_API_KEY is not set in environment variables");
+  return NextResponse.json({ error: "API Key is missing" }, { status: 500 });
 }

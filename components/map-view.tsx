@@ -157,7 +157,17 @@ export function MapView({ toilets, selectedToilet, onSelectToilet, userLocation 
   }, [isReady, toilets, selectedToilet, onSelectToilet]);
 
   // ─────────────────────────────────────────────────────────
-  // 3) 선택된 화장실로 지도 중심 이동 및 내 위치 업데이트
+  // 3) 선택된 화장실로 지도 중심 이동
+  // ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isReady || !mapRef.current || !selectedToilet) return;
+    mapRef.current.flyTo([selectedToilet.lat, selectedToilet.lng], 17, {
+      duration: 0.5,
+    });
+  }, [isReady, selectedToilet]);
+
+  // ─────────────────────────────────────────────────────────
+  // 4) 내 위치 업데이트 시 마커 이동 및 지도 중심 이동
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isReady || !mapRef.current) return;
@@ -167,11 +177,14 @@ export function MapView({ toilets, selectedToilet, onSelectToilet, userLocation 
       LRef.current.userLocationMarker.setLatLng([userLocation.lat, userLocation.lng]);
     }
     
-    if (!selectedToilet) return;
-    mapRef.current.flyTo([selectedToilet.lat, selectedToilet.lng], 17, {
-      duration: 0.5,
-    });
-  }, [isReady, selectedToilet, userLocation]);
+    // 선택된 화장실이 없을 때만 내 위치로 부드럽게 이동 (GPS 최초 수신 시)
+    if (!selectedToilet) {
+      mapRef.current.flyTo([userLocation.lat, userLocation.lng], 16, {
+        duration: 0.8,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, userLocation]);
 
   return (
     // ✨ 핵심: isolation-isolate 로 stacking context 만들기 + z-0 명시

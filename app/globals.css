@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   디자인 토큰 (v0.dev shadcn/ui 기본 팔레트)
+   - 긴급 앱 UX: 높은 대비, 명확한 구분
+   ========================================================================= */
+:root {
+  /* 기본 */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  /* slate-900 */
+
+  /* 카드 / 팝오버 (하단 시트, 모달, 카드) */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* Primary - SOS 버튼, 주요 CTA (긴급 빨강) */
+  --primary: #ef4444;
+  /* red-500 */
+  --primary-foreground: #ffffff;
+
+  /* Secondary / Muted - 보조 버튼, 배경 */
+  --secondary: #f1f5f9;
+  /* slate-100 */
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  /* slate-100 */
+  --muted-foreground: #64748b;
+  /* slate-500 */
+
+  /* Accent - 호버, 강조 */
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+
+  /* 상태별 색상 */
+  --success: #10b981;
+  /* green-500 - 파트너 매장 */
+  --success-foreground: #ffffff;
+  --info: #3b82f6;
+  /* blue-500 - 개방형/공용 */
+  --info-foreground: #ffffff;
+  --warning: #f59e0b;
+  /* amber-500 - 눈치 중간 */
+  --warning-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* 경계선 / 입력 필드 */
+  --border: #e2e8f0;
+  /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #ef4444;
+  /* SOS 빨강으로 포커스 링 */
+
+  /* 반경 */
+  --radius: 0.75rem;
+}
+
+/* 다크 모드 - 현재는 앱에서 쓰지 않지만 향후 대비 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --card: #1a1a1a;
+    --card-foreground: #ededed;
+    --popover: #1a1a1a;
+    --popover-foreground: #ededed;
+    --primary: #ef4444;
+    --primary-foreground: #ffffff;
+    --secondary: #262626;
+    --secondary-foreground: #ededed;
+    --muted: #262626;
+    --muted-foreground: #a3a3a3;
+    --accent: #262626;
+    --accent-foreground: #ededed;
+    --border: #262626;
+    --input: #262626;
+  }
+}
+
+/* =========================================================================
+   Tailwind v4 테마 연결
+   - 위의 CSS 변수를 Tailwind 클래스로 매핑
+   - bg-card, text-muted-foreground 등이 여기 덕분에 작동
+   ========================================================================= */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* =========================================================================
+   기본 스타일
+   ========================================================================= */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 스크롤바 숨김 (모바일 스타일) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 안전 영역 패딩 (iOS notch 대응) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* =========================================================================
+   Leaflet 지도 z-index 강제 (하단시트, SOS 버튼 등이 덮지 않도록)
+   ========================================================================= */
+.leaflet-container {
+  z-index: 0 !important;
+  font-family: inherit;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 0 !important;
+}
+
+.leaflet-control {
+  z-index: 1 !important;
+}
+
+.leaflet-popup-pane,
+.leaflet-tooltip-pane {
+  z-index: 2 !important;
+}
+
+/* Leaflet 타일을 살짝 밝게 (UI 가독성 향상) */
+.leaflet-tile {
+  filter: saturate(0.85) brightness(1.02);
+}

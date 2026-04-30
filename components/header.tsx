@@ -14,11 +14,6 @@ export function Header() {
           <span className="font-bold text-xl text-foreground tracking-tight">RUSH</span>
         </div>
 
-        {/* Current location */}
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <MapPin className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">강남역 2번 출구</span>
-        </div>
       </div>
     </header>
   );

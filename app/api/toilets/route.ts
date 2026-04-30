@@ -81,7 +81,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // API 키가 아예 설정되지 않은 경우
-  console.error("KAKAO_REST_API_KEY is not set in environment variables");
-  return NextResponse.json({ error: "API Key is missing" }, { status: 500 });
+  // API 키가 아예 설정되지 않은 경우, 목(mock) 데이터를 반환합니다.
+  console.warn("KAKAO_REST_API_KEY is not set in environment variables. Falling back to mock data.");
+  return NextResponse.json(mockToilets);
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { Map, CustomOverlayMap, useKakaoLoader } from "react-kakao-maps-sdk";
 import type { Toilet } from "@/lib/mock-data";
 
 interface MapViewProps {
@@ -8,6 +9,13 @@ interface MapViewProps {
   selectedToilet: Toilet | null;
   onSelectToilet: (toilet: Toilet) => void;
   userLocation: { lat: number; lng: number };
+}
+
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kakao: any;
+  }
 }
 
 /** 화장실 유형별 마커 색상 */
@@ -38,168 +46,92 @@ function createMarkerSvg(color: string, isSelected: boolean): string {
 }
 
 export function MapView({ toilets, selectedToilet, onSelectToilet, userLocation }: MapViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [loading, error] = useKakaoLoader({
+    appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY as string,
+    libraries: ["clusterer", "services"],
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markersRef = useRef<Map<string, any>>(new Map());
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const LRef = useRef<any>(null);
-  const [isReady, setIsReady] = useState(false);
 
-  // ─────────────────────────────────────────────────────────
-  // 1) Leaflet 동적 로드 + 지도 초기화 (최초 1회)
-  // ─────────────────────────────────────────────────────────
   useEffect(() => {
-    let cancelled = false;
+    if (loading || error || !mapRef.current || !selectedToilet) return;
+    const moveLatLon = new window.kakao.maps.LatLng(selectedToilet.lat, selectedToilet.lng);
+    mapRef.current.panTo(moveLatLon);
+  }, [loading, error, selectedToilet]);
 
-    import("leaflet").then((leafletModule) => {
-      if (cancelled || !containerRef.current) return;
-
-      const L = leafletModule.default;
-      LRef.current = L;
-
-      if (mapRef.current) return;
-
-      const map = L.map(containerRef.current, {
-        center: [userLocation.lat, userLocation.lng],
-        zoom: 16,
-        zoomControl: false,       // ✨ +/- 컨트롤 숨김 (공간 확보)
-        attributionControl: false, // ✨ 저작권 표시 숨김 (나중에 별도 표시)
-      });
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap",
-        maxZoom: 19,
-      }).addTo(map);
-
-      // 현재 위치 표시
-      const locationMarker = L.circleMarker([userLocation.lat, userLocation.lng], {
-        radius: 8,
-        fillColor: "#ef4444",
-        color: "#ffffff",
-        weight: 3,
-        opacity: 1,
-        fillOpacity: 0.9,
-      })
-        .bindTooltip("내 위치", { permanent: false, direction: "top" })
-        .addTo(map);
-
-      // Save user location marker to ref for future updates
-      LRef.current.userLocationMarker = locationMarker;
-
-      mapRef.current = map;
-      setIsReady(true);
-    });
-
-    return () => {
-      cancelled = true;
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-      markersRef.current.clear();
-    };
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // 2) 마커 그리기 / 업데이트
-  // ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isReady || !mapRef.current || !LRef.current) return;
+    // 최초 위치 설정 시 부드럽게 이동, 혹은 선택된 화장실이 없을 때
+    if (loading || error || !mapRef.current || selectedToilet) return;
+    const moveLatLon = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+    mapRef.current.panTo(moveLatLon);
+  }, [loading, error, userLocation, selectedToilet]);
 
-    const L = LRef.current;
-    const map = mapRef.current;
-    const markers = markersRef.current;
-    const currentIds = new Set(toilets.map((t) => t.id));
-
-    markers.forEach((marker, id) => {
-      if (!currentIds.has(id)) {
-        map.removeLayer(marker);
-        markers.delete(id);
-      }
-    });
-
-    toilets.forEach((toilet) => {
-      const isSelected = selectedToilet?.id === toilet.id;
-      const color = getPinHexColor(toilet.type);
-      const iconSize: [number, number] = isSelected ? [44, 44] : [36, 36];
-      const iconAnchor: [number, number] = isSelected ? [22, 44] : [18, 36];
-
-      const divIcon = L.divIcon({
-        className: "custom-toilet-marker",
-        html: createMarkerSvg(color, isSelected),
-        iconSize,
-        iconAnchor,
-      });
-
-      const existing = markers.get(toilet.id);
-      if (existing) {
-        existing.setIcon(divIcon);
-      } else {
-        const marker = L.marker([toilet.lat, toilet.lng], {
-          icon: divIcon,
-          title: toilet.name,
-        })
-          .bindTooltip(toilet.name, {
-            direction: "top",
-            offset: [0, -iconSize[1] / 2],
-          })
-          .addTo(map);
-
-        marker.on("click", () => {
-          onSelectToilet(toilet);
-        });
-
-        markers.set(toilet.id, marker);
-      }
-    });
-  }, [isReady, toilets, selectedToilet, onSelectToilet]);
-
-  // ─────────────────────────────────────────────────────────
-  // 3) 선택된 화장실로 지도 중심 이동
-  // ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isReady || !mapRef.current || !selectedToilet) return;
-    mapRef.current.flyTo([selectedToilet.lat, selectedToilet.lng], 17, {
-      duration: 0.5,
-    });
-  }, [isReady, selectedToilet]);
-
-  // ─────────────────────────────────────────────────────────
-  // 4) 내 위치 업데이트 시 마커 이동 및 지도 중심 이동
-  // ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isReady || !mapRef.current) return;
-    
-    // Update user location marker if it exists
-    if (LRef.current?.userLocationMarker) {
-      LRef.current.userLocationMarker.setLatLng([userLocation.lat, userLocation.lng]);
-    }
-    
-    // 선택된 화장실이 없을 때만 내 위치로 부드럽게 이동 (GPS 최초 수신 시)
-    if (!selectedToilet) {
-      mapRef.current.flyTo([userLocation.lat, userLocation.lng], 16, {
-        duration: 0.8,
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, userLocation]);
+  const isReady = !loading && !error;
 
   return (
-    // ✨ 핵심: isolation-isolate 로 stacking context 만들기 + z-0 명시
     <div className="absolute inset-0 bg-muted isolate" style={{ zIndex: 0 }}>
-      <div
-        ref={containerRef}
-        className="absolute inset-0"
-        style={{ background: "#e5e7eb", zIndex: 0 }}
-      />
+      {isReady ? (
+        <Map
+          center={{ lat: userLocation.lat, lng: userLocation.lng }}
+          style={{ width: "100%", height: "100%", background: "#e5e7eb" }}
+          level={3}
+          ref={mapRef}
+          isPanto={true}
+        >
+          {/* 내 위치 마커 */}
+          <CustomOverlayMap position={{ lat: userLocation.lat, lng: userLocation.lng }} zIndex={2}>
+            <div className="relative flex flex-col items-center pointer-events-none">
+              <div className="w-4 h-4 bg-red-500 rounded-full border-[3px] border-white shadow-md relative z-10" />
+              <div className="absolute -top-7 whitespace-nowrap px-2 py-1 bg-white/90 text-xs rounded shadow-sm font-semibold z-20">
+                내 위치
+              </div>
+            </div>
+          </CustomOverlayMap>
 
-      {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 1 }}>
-          <div className="text-muted-foreground/50 text-center">
+          {/* 화장실 마커들 */}
+          {toilets.map((toilet) => {
+            const isSelected = selectedToilet?.id === toilet.id;
+            const color = getPinHexColor(toilet.type);
+            const svgString = createMarkerSvg(color, isSelected);
+
+            return (
+              <CustomOverlayMap 
+                key={toilet.id} 
+                position={{ lat: toilet.lat, lng: toilet.lng }}
+                zIndex={isSelected ? 10 : 1}
+              >
+                <div 
+                  onClick={() => onSelectToilet(toilet)}
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  {/* Tooltip for toilet name */}
+                  <div className="absolute -top-7 whitespace-nowrap px-2 py-1 bg-white/90 text-[10px] rounded shadow-sm font-semibold pointer-events-none text-slate-800 transition-all duration-200"
+                    style={{
+                      transform: isSelected ? 'translateY(-4px)' : 'translateY(0)',
+                      opacity: isSelected ? 1 : 0.8
+                    }}
+                  >
+                    {toilet.name}
+                  </div>
+                  <div
+                    className="flex justify-center items-center drop-shadow-md transition-transform duration-200 hover:scale-105"
+                    dangerouslySetInnerHTML={{ __html: svgString }}
+                  />
+                </div>
+              </CustomOverlayMap>
+            );
+          })}
+        </Map>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-[#e5e7eb]" style={{ zIndex: 1 }}>
+          <div className="text-muted-foreground/50 text-center flex flex-col items-center gap-2">
             <div className="text-6xl mb-2 animate-pulse">🗺️</div>
-            <p className="text-sm">지도 불러오는 중...</p>
+            {error ? (
+              <p className="text-sm text-red-500 font-semibold">지도 스크립트를 불러오는데 실패했습니다.<br/>앱 키나 도메인 설정을 확인해주세요.</p>
+            ) : (
+              <p className="text-sm">지도 불러오는 중...</p>
+            )}
           </div>
         </div>
       )}

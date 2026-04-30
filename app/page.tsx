@@ -69,7 +69,9 @@ export default function RushApp() {
   }, [sortedToilets]);
 
   const handleNavigate = useCallback((toilet: Toilet) => {
-    alert(`${toilet.name}으로 길 안내를 시작합니다!`);
+    // 카카오맵 길찾기 URL (도착지 위도/경도 지정)
+    const url = `https://map.kakao.com/link/to/${encodeURIComponent(toilet.name)},${toilet.lat},${toilet.lng}`;
+    window.open(url, "_blank");
   }, []);
 
   const handleComplete = useCallback((toilet: Toilet) => {
